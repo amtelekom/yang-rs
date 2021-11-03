@@ -89,7 +89,7 @@ pub trait Stmt {
                         _ => Err(YangError::UnexpectedToken(token.to_string())),
                     }
                 }
-                _ => Err(YangError::UnexpectedToken(token.to_string())),
+                _ => Err(YangError::UnexpectedToken(format!("{} in {}, expected BlockBegin", token.to_string(), Self::keyword()))),
             }
         } else if Self::opt_substmts() {
             let token = parser.get_token()?;
@@ -4826,8 +4826,8 @@ impl Stmt for InputStmt {
         "input"
     }
 
-    /// Return true if this statement has substatements.
-    fn has_substmts() -> bool {
+    /// Return true if this statement has sub-statements optionally.
+    fn opt_substmts() -> bool {
         true
     }
 
@@ -4838,6 +4838,18 @@ impl Stmt for InputStmt {
             SubStmtDef::ZeroOrMore(SubStmtWith::Selection(TypedefOrGrouping::keywords)),
             SubStmtDef::OneOrMore(SubStmtWith::Selection(DataDefStmt::keywords)),
         ]
+    }
+
+
+    fn new_with_arg(_arg: Self::Arg) -> YangStmt
+    where
+        Self: Sized,
+    {
+        YangStmt::InputStmt(InputStmt {
+            must: Vec::new(),
+            typedef_or_grouping: TypedefOrGrouping::new(),
+            data_def: DataDefStmt::new()
+        })
     }
 
     /// Constructor with tuple of substatements. Panic if it is not defined.
@@ -4945,8 +4957,8 @@ impl Stmt for OutputStmt {
         "output"
     }
 
-    /// Return true if this statement has substatements.
-    fn has_substmts() -> bool {
+    /// Return true if this statement has sub-statements optionally.
+    fn opt_substmts() -> bool {
         true
     }
 
@@ -4957,6 +4969,17 @@ impl Stmt for OutputStmt {
             SubStmtDef::ZeroOrMore(SubStmtWith::Selection(TypedefOrGrouping::keywords)),
             SubStmtDef::OneOrMore(SubStmtWith::Selection(DataDefStmt::keywords)),
         ]
+    }
+
+    fn new_with_arg(_arg: Self::Arg) -> YangStmt
+    where
+        Self: Sized,
+    {
+        YangStmt::OutputStmt(OutputStmt {
+            must: Vec::new(),
+            typedef_or_grouping: TypedefOrGrouping::new(),
+            data_def: DataDefStmt::new()
+        })
     }
 
     /// Constructor with tuple of substatements. Panic if it is not defined.
