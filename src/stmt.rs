@@ -5550,11 +5550,10 @@ impl UnknownStmt {
         let token = parser.get_token()?;
         let arg = match token {
             Token::Identifier(s) | Token::QuotedString(s) => Some(s),
-            Token::StatementEnd => {
+            _ => {
                 parser.save_token(token);
                 None
             }
-            _ => return Err(YangError::UnexpectedToken(token.to_string())),
         };
 
         let token = parser.get_token()?;
