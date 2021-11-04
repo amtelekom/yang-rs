@@ -824,22 +824,33 @@ impl StmtArg for PositionValueArg {
 pub enum PathArg {
     AbsolutePath(AbsolutePath),
     RelativePath(RelativePath),
+    DerefPath(DerefPath)
 }
 
 impl StmtArg for PathArg {
     fn parse_arg(parser: &mut Parser) -> Result<Self, YangError> {
-        let str = parse_string(parser)?;
+        let s = parse_string(parser)?;
+        Self::from_str(&s).map_err(|e| YangError::ArgumentParseError(e.str))
+    }
+}
 
-        if str.starts_with('/') {
+impl FromStr for PathArg {
+    type Err = ArgError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.starts_with('/') {
             Ok(PathArg::AbsolutePath(
-                AbsolutePath::from_str(&str).map_err(|e| YangError::ArgumentParseError(e.str))?,
+                AbsolutePath::from_str(&s)?,
             ))
-        } else if str.starts_with("..") {
+        } else if s.starts_with("..") {
             Ok(PathArg::RelativePath(
-                RelativePath::from_str(&str).map_err(|e| YangError::ArgumentParseError(e.str))?,
+                RelativePath::from_str(&s)?,
+            ))
+        } else if s.starts_with("deref") {
+            Ok(PathArg::DerefPath(
+                DerefPath::from_str(s)?,
             ))
         } else {
-            Err(YangError::ArgumentParseError("path-arg"))
+            Err(ArgError { str: "path-arg start"} )
         }
     }
 }
@@ -943,6 +954,56 @@ impl FromStr for RelativePath {
         })
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Getters)]
+pub struct DerefPath {
+    deref_path: Box<PathArg>, // Needs to be boxed to prevent recursion
+    relative_path: RelativePath,
+}
+
+impl FromStr for DerefPath {
+    type Err = ArgError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if !s.starts_with("deref(") {
+            return Err(ArgError::new("deref-path prefix"));
+        }
+        let mut paren_count = 0;
+        let mut deref_arg_end = 0;
+        for (i, c) in s.chars().enumerate().skip("deref".len()) {
+            match c {
+                '(' => paren_count += 1,
+                ')' => {
+                    paren_count -= 1;
+                    if paren_count == 0 {
+                        deref_arg_end = i;
+                        break;
+                    }
+                },
+                _ => {}
+            };
+        }
+
+        if deref_arg_end == 0 {
+            println!("Paren mismatch in '{}': {}", s, paren_count);
+            return Err(ArgError::new("deref-path parens"));
+        }
+
+        let path_remainder_start = deref_arg_end + 2; // skip )/
+        if &s[deref_arg_end..path_remainder_start] != ")/" {
+            return Err(ArgError::new("deref-path follow"));
+        }
+        
+        let deref_path = PathArg::from_str(&s[6..deref_arg_end])?;
+        let relative_path = RelativePath::from_str(&s[path_remainder_start..])?;
+
+        Ok(DerefPath {
+            deref_path: Box::new(deref_path),
+            relative_path,
+        })
+    }
+}
+
 
 /// "descendant-path".
 #[derive(Debug, Clone, PartialEq, Getters)]
@@ -1136,6 +1197,10 @@ impl Tokenizer {
             self.pos += p;
         }
 
+        let next_whitespace = self.line().find(|c: char| c.is_whitespace());
+        // Determine the next whitespace to decide
+        // between keywords ('or') and identifiers starting the same ('origin')
+
         if self.line().len() == 0 {
             IfFeatureToken::EndOfLine
         } else if self.line().starts_with('(') {
@@ -1144,13 +1209,13 @@ impl Tokenizer {
         } else if self.line().starts_with(')') {
             self.pos += 1;
             IfFeatureToken::ParenEnd
-        } else if self.line().starts_with("not") {
+        } else if self.line().starts_with("not") && next_whitespace == Some(3) {
             self.pos += 3;
             IfFeatureToken::Not
-        } else if self.line().starts_with("and") {
+        } else if self.line().starts_with("and") && next_whitespace == Some(3) {
             self.pos += 3;
             IfFeatureToken::And
-        } else if self.line().starts_with("or") {
+        } else if self.line().starts_with("or") && next_whitespace == Some(2) {
             self.pos += 2;
             IfFeatureToken::Or
         } else {
@@ -1204,7 +1269,7 @@ impl IfFeatureExpr {
                         IfFeatureToken::ParenBegin
                         | IfFeatureToken::ParenEnd
                         | IfFeatureToken::IdentifierRef(_) => {
-                            return Err(ArgError::new("if-feature-expr"))
+                            return Err(ArgError::new("if-feature-expr: invalid begin paren"))
                         }
                         _ => {}
                     }
@@ -1219,7 +1284,7 @@ impl IfFeatureExpr {
                         IfFeatureToken::ParenBegin
                         | IfFeatureToken::Not
                         | IfFeatureToken::And
-                        | IfFeatureToken::Or => return Err(ArgError::new("if-feature-expr")),
+                        | IfFeatureToken::Or => return Err(ArgError::new("if-feature-expr: invalid end paren")),
                         _ => {}
                     }
 
@@ -1231,7 +1296,7 @@ impl IfFeatureExpr {
                         | IfFeatureToken::ParenBegin
                         | IfFeatureToken::Not
                         | IfFeatureToken::And
-                        | IfFeatureToken::Or => return Err(ArgError::new("if-feature-expr")),
+                        | IfFeatureToken::Or => return Err(ArgError::new("if-feature-expr: invalid or")),
                         _ => {}
                     }
 
@@ -1245,7 +1310,7 @@ impl IfFeatureExpr {
                     | IfFeatureToken::ParenBegin
                     | IfFeatureToken::Not
                     | IfFeatureToken::And
-                    | IfFeatureToken::Or => return Err(ArgError::new("if-feature-expr")),
+                    | IfFeatureToken::Or => return Err(ArgError::new("if-feature-expr: invalid and")),
                     _ => {}
                 },
                 IfFeatureToken::Not => {
@@ -1253,7 +1318,7 @@ impl IfFeatureExpr {
                         IfFeatureToken::ParenEnd
                         | IfFeatureToken::Not
                         | IfFeatureToken::IdentifierRef(_) => {
-                            return Err(ArgError::new("if-feature-expr"))
+                            return Err(ArgError::new("if-feature-expr: invalid not"))
                         }
                         _ => {}
                     }
@@ -1263,7 +1328,7 @@ impl IfFeatureExpr {
                 IfFeatureToken::IdentifierRef(ref str) => {
                     match prev {
                         IfFeatureToken::ParenEnd | IfFeatureToken::IdentifierRef(_) => {
-                            return Err(ArgError::new("if-feature-expr"))
+                            return Err(ArgError::new("if-feature-expr: invalid idref"))
                         }
                         _ => {}
                     }
@@ -1953,6 +2018,22 @@ mod tests {
         };
 
         match AbsolutePath::from_str(s) {
+            Ok(p) => assert_eq!(p, path),
+            Err(err) => panic!("{:?}", err.to_string()),
+        }
+    }
+
+    #[test]
+    pub fn test_deref_path() {
+        let s = "deref(../node1/node2)/../node3/node4[id=current()/../rel1/rel2]";
+        let path = DerefPath {
+            deref_path: Box::new(PathArg::RelativePath(
+                RelativePath::from_str("../node1/node2").unwrap()
+            )),
+            relative_path: RelativePath::from_str("../node3/node4[id=current()/../rel1/rel2]").unwrap()
+        };
+
+        match DerefPath::from_str(s) {
             Ok(p) => assert_eq!(p, path),
             Err(err) => panic!("{:?}", err.to_string()),
         }
