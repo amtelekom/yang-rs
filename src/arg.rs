@@ -2126,7 +2126,7 @@ mod tests {
 
         match IfFeatureExpr::parse_arg(&mut parser) {
             Ok(expr) => panic!("{:?}", expr),
-            Err(err) => assert_eq!(err.to_string(), "Argument parse error if-feature-expr"),
+            Err(err) => assert_eq!(err.to_string(), "Argument parse error if-feature-expr: invalid idref"),
         }
     }
 
