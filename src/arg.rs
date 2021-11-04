@@ -1192,14 +1192,17 @@ impl Tokenizer {
         &self.str[self.pos..]
     }
 
+    fn starts_with_keyword(line:&str, key:&str) -> bool {
+        // Helper to also check if a keyword is followed by a whitespace determine the next whitespace for decidingto decide
+        // between keywords ('or') and identifiers starting the same ('origin')
+        line.starts_with(key) &&
+            line.find(|c: char| c.is_whitespace()) == Some(key.len())
+    }
+
     pub fn get_token(&mut self) -> IfFeatureToken {
         if let Some(p) = self.line().find(|c: char| !c.is_whitespace()) {
             self.pos += p;
-        }
-
-        let next_whitespace = self.line().find(|c: char| c.is_whitespace());
-        // Determine the next whitespace to decide
-        // between keywords ('or') and identifiers starting the same ('origin')
+        } 
 
         if self.line().len() == 0 {
             IfFeatureToken::EndOfLine
@@ -1209,13 +1212,13 @@ impl Tokenizer {
         } else if self.line().starts_with(')') {
             self.pos += 1;
             IfFeatureToken::ParenEnd
-        } else if self.line().starts_with("not") && next_whitespace == Some(3) {
+        } else if Tokenizer::starts_with_keyword(self.line(), "not") {
             self.pos += 3;
             IfFeatureToken::Not
-        } else if self.line().starts_with("and") && next_whitespace == Some(3) {
+        } else if Tokenizer::starts_with_keyword(self.line(), "and") {
             self.pos += 3;
             IfFeatureToken::And
-        } else if self.line().starts_with("or") && next_whitespace == Some(2) {
+        } else if Tokenizer::starts_with_keyword(self.line(), "or") {
             self.pos += 2;
             IfFeatureToken::Or
         } else {
