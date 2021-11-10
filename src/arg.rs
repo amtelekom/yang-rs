@@ -95,6 +95,12 @@ impl fmt::Display for Identifier {
     }
 }
 
+impl<'a> Into<&'a str> for &'a Identifier {
+    fn into(self) -> &'a str { 
+        &self.str
+    }
+}
+
 impl FromStr for Identifier {
     type Err = ArgError;
 
