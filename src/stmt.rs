@@ -103,13 +103,13 @@ pub trait Stmt {
                         _ => Err(YangError::UnexpectedToken(token.to_string())),
                     }
                 }
-                _ => Err(YangError::UnexpectedToken(token.to_string())),
+                _ => Err(YangError::UnexpectedToken(format!("{} in {}, expected BlockBegin or ;", token.to_string(), Self::keyword()))),
             }
         } else {
             let token = parser.get_token()?;
             match token {
                 Token::StatementEnd => Ok(Self::new_with_arg(arg)),
-                _ => Err(YangError::UnexpectedToken(token.to_string())),
+                _ => Err(YangError::UnexpectedToken(format!("{} in {}, expected ;", token.to_string(), Self::keyword()))),
             }
         }
     }
@@ -5318,7 +5318,7 @@ impl Stmt for DeviateStmt {
                 let token = parser.get_token()?;
                 match token {
                     Token::StatementEnd => Ok(YangStmt::DeviateStmt(DeviateStmt::NotSupported)),
-                    _ => Err(YangError::UnexpectedToken(token.to_string())),
+                    _ => Err(YangError::UnexpectedToken(format!("{} after 'not-supported'", token.to_string()))),
                 }
             }
             _ => Err(YangError::UnexpectedToken(arg.to_string())),
