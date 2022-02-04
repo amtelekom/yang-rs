@@ -96,7 +96,7 @@ impl fmt::Display for Identifier {
 }
 
 impl<'a> Into<&'a str> for &'a Identifier {
-    fn into(self) -> &'a str { 
+    fn into(self) -> &'a str {
         &self.str
     }
 }
@@ -830,7 +830,7 @@ impl StmtArg for PositionValueArg {
 pub enum PathArg {
     AbsolutePath(AbsolutePath),
     RelativePath(RelativePath),
-    DerefPath(DerefPath)
+    DerefPath(DerefPath),
 }
 
 impl StmtArg for PathArg {
@@ -844,19 +844,15 @@ impl FromStr for PathArg {
     type Err = ArgError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.starts_with('/') {
-            Ok(PathArg::AbsolutePath(
-                AbsolutePath::from_str(&s)?,
-            ))
+            Ok(PathArg::AbsolutePath(AbsolutePath::from_str(&s)?))
         } else if s.starts_with("..") {
-            Ok(PathArg::RelativePath(
-                RelativePath::from_str(&s)?,
-            ))
+            Ok(PathArg::RelativePath(RelativePath::from_str(&s)?))
         } else if s.starts_with("deref") {
-            Ok(PathArg::DerefPath(
-                DerefPath::from_str(s)?,
-            ))
+            Ok(PathArg::DerefPath(DerefPath::from_str(s)?))
         } else {
-            Err(ArgError { str: "path-arg start"} )
+            Err(ArgError {
+                str: "path-arg start",
+            })
         }
     }
 }
@@ -985,7 +981,7 @@ impl FromStr for DerefPath {
                         deref_arg_end = i;
                         break;
                     }
-                },
+                }
                 _ => {}
             };
         }
@@ -999,7 +995,7 @@ impl FromStr for DerefPath {
         if &s[deref_arg_end..path_remainder_start] != ")/" {
             return Err(ArgError::new("deref-path follow"));
         }
-        
+
         let deref_path = PathArg::from_str(&s[6..deref_arg_end])?;
         let relative_path = RelativePath::from_str(&s[path_remainder_start..])?;
 
@@ -1009,7 +1005,6 @@ impl FromStr for DerefPath {
         })
     }
 }
-
 
 /// "descendant-path".
 #[derive(Debug, Clone, PartialEq, Getters)]
@@ -1198,17 +1193,16 @@ impl Tokenizer {
         &self.str[self.pos..]
     }
 
-    fn starts_with_keyword(line:&str, key:&str) -> bool {
+    fn starts_with_keyword(line: &str, key: &str) -> bool {
         // Helper to also check if a keyword is followed by a whitespace determine the next whitespace for decidingto decide
         // between keywords ('or') and identifiers starting the same ('origin')
-        line.starts_with(key) &&
-            line.find(|c: char| c.is_whitespace()) == Some(key.len())
+        line.starts_with(key) && line.find(|c: char| c.is_whitespace()) == Some(key.len())
     }
 
     pub fn get_token(&mut self) -> IfFeatureToken {
         if let Some(p) = self.line().find(|c: char| !c.is_whitespace()) {
             self.pos += p;
-        } 
+        }
 
         if self.line().len() == 0 {
             IfFeatureToken::EndOfLine
@@ -1293,7 +1287,9 @@ impl IfFeatureExpr {
                         IfFeatureToken::ParenBegin
                         | IfFeatureToken::Not
                         | IfFeatureToken::And
-                        | IfFeatureToken::Or => return Err(ArgError::new("if-feature-expr: invalid end paren")),
+                        | IfFeatureToken::Or => {
+                            return Err(ArgError::new("if-feature-expr: invalid end paren"))
+                        }
                         _ => {}
                     }
 
@@ -1305,7 +1301,9 @@ impl IfFeatureExpr {
                         | IfFeatureToken::ParenBegin
                         | IfFeatureToken::Not
                         | IfFeatureToken::And
-                        | IfFeatureToken::Or => return Err(ArgError::new("if-feature-expr: invalid or")),
+                        | IfFeatureToken::Or => {
+                            return Err(ArgError::new("if-feature-expr: invalid or"))
+                        }
                         _ => {}
                     }
 
@@ -1319,7 +1317,9 @@ impl IfFeatureExpr {
                     | IfFeatureToken::ParenBegin
                     | IfFeatureToken::Not
                     | IfFeatureToken::And
-                    | IfFeatureToken::Or => return Err(ArgError::new("if-feature-expr: invalid and")),
+                    | IfFeatureToken::Or => {
+                        return Err(ArgError::new("if-feature-expr: invalid and"))
+                    }
                     _ => {}
                 },
                 IfFeatureToken::Not => {
@@ -2037,9 +2037,10 @@ mod tests {
         let s = "deref(../node1/node2)/../node3/node4[id=current()/../rel1/rel2]";
         let path = DerefPath {
             deref_path: Box::new(PathArg::RelativePath(
-                RelativePath::from_str("../node1/node2").unwrap()
+                RelativePath::from_str("../node1/node2").unwrap(),
             )),
-            relative_path: RelativePath::from_str("../node3/node4[id=current()/../rel1/rel2]").unwrap()
+            relative_path: RelativePath::from_str("../node3/node4[id=current()/../rel1/rel2]")
+                .unwrap(),
         };
 
         match DerefPath::from_str(s) {
@@ -2135,7 +2136,10 @@ mod tests {
 
         match IfFeatureExpr::parse_arg(&mut parser) {
             Ok(expr) => panic!("{:?}", expr),
-            Err(err) => assert_eq!(err.to_string(), "Argument parse error if-feature-expr: invalid idref"),
+            Err(err) => assert_eq!(
+                err.to_string(),
+                "Argument parse error if-feature-expr: invalid idref"
+            ),
         }
     }
 

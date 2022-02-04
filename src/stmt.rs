@@ -89,7 +89,11 @@ pub trait Stmt {
                         _ => Err(YangError::UnexpectedToken(token.to_string())),
                     }
                 }
-                _ => Err(YangError::UnexpectedToken(format!("{} in {}, expected BlockBegin", token.to_string(), Self::keyword()))),
+                _ => Err(YangError::UnexpectedToken(format!(
+                    "{} in {}, expected BlockBegin",
+                    token.to_string(),
+                    Self::keyword()
+                ))),
             }
         } else if Self::opt_substmts() {
             let token = parser.get_token()?;
@@ -103,13 +107,21 @@ pub trait Stmt {
                         _ => Err(YangError::UnexpectedToken(token.to_string())),
                     }
                 }
-                _ => Err(YangError::UnexpectedToken(format!("{} in {}, expected BlockBegin or ;", token.to_string(), Self::keyword()))),
+                _ => Err(YangError::UnexpectedToken(format!(
+                    "{} in {}, expected BlockBegin or ;",
+                    token.to_string(),
+                    Self::keyword()
+                ))),
             }
         } else {
             let token = parser.get_token()?;
             match token {
                 Token::StatementEnd => Ok(Self::new_with_arg(arg)),
-                _ => Err(YangError::UnexpectedToken(format!("{} in {}, expected ;", token.to_string(), Self::keyword()))),
+                _ => Err(YangError::UnexpectedToken(format!(
+                    "{} in {}, expected ;",
+                    token.to_string(),
+                    Self::keyword()
+                ))),
             }
         }
     }
@@ -4840,7 +4852,6 @@ impl Stmt for InputStmt {
         ]
     }
 
-
     fn new_with_arg(_arg: Self::Arg) -> YangStmt
     where
         Self: Sized,
@@ -4848,7 +4859,7 @@ impl Stmt for InputStmt {
         YangStmt::InputStmt(InputStmt {
             must: Vec::new(),
             typedef_or_grouping: TypedefOrGrouping::new(),
-            data_def: DataDefStmt::new()
+            data_def: DataDefStmt::new(),
         })
     }
 
@@ -4978,7 +4989,7 @@ impl Stmt for OutputStmt {
         YangStmt::OutputStmt(OutputStmt {
             must: Vec::new(),
             typedef_or_grouping: TypedefOrGrouping::new(),
-            data_def: DataDefStmt::new()
+            data_def: DataDefStmt::new(),
         })
     }
 
@@ -5318,7 +5329,10 @@ impl Stmt for DeviateStmt {
                 let token = parser.get_token()?;
                 match token {
                     Token::StatementEnd => Ok(YangStmt::DeviateStmt(DeviateStmt::NotSupported)),
-                    _ => Err(YangError::UnexpectedToken(format!("{} after 'not-supported'", token.to_string()))),
+                    _ => Err(YangError::UnexpectedToken(format!(
+                        "{} after 'not-supported'",
+                        token.to_string()
+                    ))),
                 }
             }
             _ => Err(YangError::UnexpectedToken(arg.to_string())),
