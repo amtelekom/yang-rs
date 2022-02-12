@@ -485,15 +485,6 @@ impl TypeBodyStmts {
             })
         } else if let Ok(range) = collect_a_stmt!(stmts, RangeStmt) {
             TypeBodyStmts::NumericalRestrictions(NumericalRestrictions { range: Some(range) })
-        } else if let Ok(pattern) = collect_vec_stmt!(stmts, PatternStmt) {
-            // TBD: need check pattern.len()
-            let length = if let Ok(length) = collect_a_stmt!(stmts, LengthStmt) {
-                Some(length)
-            } else {
-                None
-            };
-
-            TypeBodyStmts::StringRestrictions(StringRestrictions { pattern, length })
         } else if let Ok(length) = collect_a_stmt!(stmts, LengthStmt) {
             TypeBodyStmts::BinarySpecification(BinarySpecification {
                 length: Some(length),
@@ -522,6 +513,15 @@ impl TypeBodyStmts {
             TypeBodyStmts::BitsSpecification(BitsSpecification { bit })
         } else if let Ok(type_) = collect_vec_stmt!(stmts, TypeStmt) {
             TypeBodyStmts::UnionSpecification(UnionSpecification { type_ })
+        } else if let Ok(pattern) = collect_vec_stmt!(stmts, PatternStmt) {
+            // TBD: need check pattern.len()
+            let length = if let Ok(length) = collect_a_stmt!(stmts, LengthStmt) {
+                Some(length)
+            } else {
+                None
+            };
+
+            TypeBodyStmts::StringRestrictions(StringRestrictions { pattern, length })
         } else {
             return Err(YangError::MissingStatement(""));
         };
