@@ -5817,6 +5817,83 @@ mod tests {
     }
 
     #[test]
+    pub fn test_typedef_type_identityref() {
+        let s = r#"origin-ref {
+            type identityref {
+              base origin;
+            }
+            description
+              "An origin identity reference.";
+          }"#;
+
+        let mut parser = Parser::new(s.to_string());
+        match TypedefStmt::parse(&mut parser) {
+            Ok(yang) => match yang {
+                YangStmt::TypedefStmt(stmt) => {
+                    assert_eq!(stmt.arg(), &Identifier::from_str("origin-ref").unwrap());
+                    assert_eq!(
+                        stmt.type_().arg(),
+                        &IdentifierRef::from_str("identityref").unwrap()
+                    );
+
+                    match stmt.type_().type_body() {
+                        Some(TypeBodyStmts::IdentityrefSpecification(idref)) => {
+                            assert_eq!(idref.base().len(), 1);
+                            assert_eq!(
+                                idref.base()[0].arg(),
+                                &IdentifierRef::from_str("origin").unwrap()
+                            )
+                        }
+                        _ => panic!("Unexpected type_body!"),
+                    }
+                }
+                _ => panic!("Unexpected stmt {:?}", yang),
+            },
+            Err(err) => panic!("{}", err.to_string()),
+        }
+    }
+
+    #[test]
+    pub fn test_typedef_type_enum() {
+        let s = r#"action-type {
+            type enumeration {
+              enum permit {
+                description
+                  "Requested action is permitted.";
+              }
+              enum deny {
+                description
+                  "Requested action is denied.";
+              }
+            }
+          }"#;
+
+        let mut parser = Parser::new(s.to_string());
+        match TypedefStmt::parse(&mut parser) {
+            Ok(yang) => match yang {
+                YangStmt::TypedefStmt(stmt) => {
+                    assert_eq!(stmt.arg(), &Identifier::from_str("action-type").unwrap());
+                    assert_eq!(
+                        stmt.type_().arg(),
+                        &IdentifierRef::from_str("enumeration").unwrap()
+                    );
+
+                    match stmt.type_().type_body() {
+                        Some(TypeBodyStmts::EnumSpecification(enum_spec)) => {
+                            assert_eq!(enum_spec.enum_().len(), 2);
+                            assert_eq!(enum_spec.enum_()[0].arg(), "permit");
+                            assert_eq!(enum_spec.enum_()[1].arg(), "deny");
+                        }
+                        _ => panic!("Unexpected type_body!"),
+                    }
+                }
+                _ => panic!("Unexpected stmt {:?}", yang),
+            },
+            Err(err) => panic!("{}", err.to_string()),
+        }
+    }
+
+    #[test]
     pub fn test_deviation_stmt() {
         // Assuming keyword is already parsed, and arg and body are given to stmt parser.
 
