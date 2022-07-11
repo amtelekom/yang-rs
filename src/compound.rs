@@ -470,7 +470,7 @@ impl TypeBodyStmts {
     // identityref-specification		1*base-stmt
     // bits-specification			1*bit-stmt
     // union-specification			1*type-stmt
-    pub fn parse(parser: &mut Parser) -> Result<TypeBodyStmts, YangError> {
+    pub fn parse(parser: &mut Parser) -> Result<Option<TypeBodyStmts>, YangError> {
         let mut stmts = SubStmtUtil::parse_substmts(parser, Self::substmts_def())?;
 
         let type_body = if let Ok(fraction_digits) = collect_a_stmt!(stmts, FractionDigitsStmt) {
@@ -527,7 +527,7 @@ impl TypeBodyStmts {
             return Ok(None);
         };
 
-        Ok(type_body)
+        Ok(Some(type_body))
     }
 }
 

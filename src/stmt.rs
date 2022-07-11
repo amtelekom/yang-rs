@@ -1432,9 +1432,7 @@ impl Stmt for TypeStmt {
 
     /// Parse substatements.
     fn parse_substmts(parser: &mut Parser) -> Result<Self::SubStmts, YangError> {
-        let type_body = TypeBodyStmts::parse(parser)?;
-
-        Ok(Some(type_body))
+        TypeBodyStmts::parse(parser)
     }
 }
 
