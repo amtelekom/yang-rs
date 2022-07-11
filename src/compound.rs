@@ -524,7 +524,7 @@ impl TypeBodyStmts {
         } else if let Ok(type_) = collect_nonempty_vec_stmt!(stmts, TypeStmt) {
             TypeBodyStmts::UnionSpecification(UnionSpecification { type_ })
         } else {
-            return Err(YangError::MissingStatement(""));
+            return Ok(None);
         };
 
         Ok(type_body)
